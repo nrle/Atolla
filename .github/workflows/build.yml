@@ -33,7 +33,7 @@ jobs:
       - name: Show Xcode version and schemes
         run: |
           xcodebuild -version
-          xcodebuild -list -project "$PROJECT"
+          xcodebuild -list -project "$PROJECT" || true
 
       - name: Write unsigned build configuration
         run: |
