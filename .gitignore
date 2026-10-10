@@ -1,0 +1,15 @@
+.DS_Store
+
+# Imported build artifacts are kept locally for reference only.
+*.ipa
+*.zip
+
+# Xcode and Swift Package Manager build output.
+DerivedData/
+build/
+.build/
+xcuserdata/
+**/.swiftpm/
+
+# Developer-local signing configuration and credentials.
+AmpFin-1.6.4/Configuration/Debug.xcconfig
