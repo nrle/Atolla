@@ -8,6 +8,86 @@
 import SwiftUI
 import NukeUI
 import AmpFinKit
+import UIKit
+
+internal struct DominantColor {
+    let color: Color
+}
+
+internal enum RFKVisuals {
+    static func extractDominantColors(_ maximumCount: Int, image: UIImage) async throws -> [DominantColor] {
+        guard let cgImage = image.cgImage else {
+            return []
+        }
+
+        let width = min(cgImage.width, 40)
+        let height = min(cgImage.height, 40)
+        guard width > 0, height > 0,
+              let context = CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: width * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            return []
+        }
+
+        context.interpolationQuality = .low
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else {
+            return []
+        }
+
+        let sampleCount = min(maximumCount, 16)
+        let sampleStride = max(1, (width * height) / max(1, sampleCount))
+        var colors: [DominantColor] = []
+
+        for pixel in Swift.stride(from: 0, to: width * height, by: sampleStride) {
+            let offset = pixel * 4
+            let alpha = Double(data[offset + 3]) / 255
+            guard alpha > 0.2 else {
+                continue
+            }
+
+            colors.append(.init(color: Color(
+                red: Double(data[offset]) / 255,
+                green: Double(data[offset + 1]) / 255,
+                blue: Double(data[offset + 2]) / 255,
+                opacity: alpha
+            )))
+        }
+
+        return colors
+    }
+
+    static func brightnessExtremeFilter(_ colors: [Color], threshold: Double = 0.15) -> [Color] {
+        colors.filter { color in
+            var red: CGFloat = 0
+            var green: CGFloat = 0
+            var blue: CGFloat = 0
+            UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: nil)
+            let brightness = (Double(red) + Double(green) + Double(blue)) / 3
+            return brightness > threshold && brightness < 1 - threshold
+        }
+    }
+
+    static func determineMostSaturated(_ colors: [Color]) -> Color? {
+        colors.max { lhs, rhs in
+            saturation(of: lhs) < saturation(of: rhs)
+        }
+    }
+
+    private static func saturation(of color: Color) -> CGFloat {
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        UIColor(color).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+        return saturation
+    }
+}
 
 internal struct ItemImage: View {
     @Environment(\.redactionReasons) private var redactionReasons
